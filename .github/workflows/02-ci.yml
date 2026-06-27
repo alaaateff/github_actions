@@ -29,8 +29,8 @@ jobs:
         # Download the repository contents onto the runner.
         uses: actions/checkout@v6
       
-      - name: Print the checkout version
-        run: "ls -la"
+      # - name: Print the checkout version
+      #   run: "ls -la"
 
       - name: Set up Python
         # Prepare Python on the runner. This does not change the student laptop.
