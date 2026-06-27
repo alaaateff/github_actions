@@ -14,7 +14,8 @@ on:
        
   # Allow a safe manual run before students trigger it with a code change.
   workflow_dispatch:
-
+env:
+  PYTHON_VERSION: ${{ secrets.PYTHON_VERSION }}
 jobs:
   run-tests:
     # The runner is the temporary machine that executes the steps below.
@@ -32,7 +33,7 @@ jobs:
         # Prepare Python on the runner. This does not change the student laptop.
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: $PYTHON_VERSION
 
       - name: Print Python version
         run: python --version
