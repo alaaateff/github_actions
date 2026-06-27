@@ -14,8 +14,7 @@ on:
        
   # Allow a safe manual run before students trigger it with a code change.
   workflow_dispatch:
-env:
-  PYTHON_VERSION: ${{ secrets.PYTHON_VERSION }}
+  
 jobs:
   run-tests:
     # The runner is the temporary machine that executes the steps below.
