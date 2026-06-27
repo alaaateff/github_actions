@@ -7,24 +7,15 @@ on:
   pull_request:
     branches:
       - "main"
-    types:
-     - closed
   # Allow a safe manual run from the Actions tab too.
   workflow_dispatch:
 
 jobs:
-  # say-hello:
-  #   # GitHub provides a fresh runner for the job.
-  #   runs-on: ubuntu-latest
+  say-hello:
+    # GitHub provides a fresh runner for the job.
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Say hello
-  #       # This single step is enough to show a full workflow run.
-  #       run: echo "Hello from GitHub Actions and from Alaa"
-  
-  on_merge:
-   if:  github.event.pull_request.merged == true
-   runs-on: ubuntu-latest
-   steps:
-    - name: Merge PR
-      run: echo "The PR was merged"
+    steps:
+      - name: Say hello
+        # This single step is enough to show a full workflow run.
+        run: echo "Hello from GitHub Actions and from Alaa"
