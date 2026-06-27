@@ -5,17 +5,18 @@ name: 01 Hello Workflow
 on:
   # Run automatically when this workflow file changes.
   pull_request:
-    branches:
-      - "main"
+    types:
+      - closed
   # Allow a safe manual run from the Actions tab too.
   workflow_dispatch:
 
 jobs:
-  say-hello:
+  on-merge:
+    if: github.event.pull_request.merged == true
     # GitHub provides a fresh runner for the job.
     runs-on: ubuntu-latest
 
     steps:
-      - name: Say hello
+      - name: Say Hello 
         # This single step is enough to show a full workflow run.
-        run: echo "Hello from GitHub Actions and from Alaa"
+        run: echo "Hello from GitHub Actions Due to merge PR"
