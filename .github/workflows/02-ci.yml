@@ -1,6 +1,6 @@
 # This is the first real CI workflow in the course.
 # It verifies a change by running tests on a fresh runner.
-name: 02 CI Workflow
+name: 02 CI Workfloww
 
 on:
   # Run automatically when app code, tests, or this workflow file changes.
