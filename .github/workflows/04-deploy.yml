@@ -1,12 +1,9 @@
-# This workflow completes the story by delivering the saved package.
-# It starts after the build workflow finishes successfully.
-
 name: 04 Deploy Workflow
 
 on:
-  workflow_run:
-    workflows: ["03 Build Artifact Workflow"]
-    types: [completed]
+  pull_request:
+    types:
+      - closed
 
 env:
   IMAGE_NAME: tiny-health-app
@@ -22,40 +19,42 @@ permissions:
 
 jobs:
   deploy-package:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # ONLY run when PR is merged (not just closed)
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.ARTIFACT_NAME }}
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-          path: downloaded-artifact
+      - name: Show PR info
+        run: |
+          echo "Deploy triggered by merged PR"
+          echo "PR: ${{ github.event.pull_request.number }}"
+          echo "Branch: ${{ github.event.pull_request.head.ref }}"
 
-      - name: Show downloaded files
-        run: ls -R downloaded-artifact
+      # IMPORTANT: we REBUILD here because artifacts from PR are NOT reliable
+      - name: Check out repository
+        uses: actions/checkout@v6
 
       - name: Load Docker image
-        run: docker load --input "downloaded-artifact/${IMAGE_TAR}"
-
-      - name: Read image metadata from build artifact
-        id: image-metadata
         run: |
-          source "downloaded-artifact/${IMAGE_METADATA}"
-          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          echo "image_reference=${IMAGE_REFERENCE}" >> "$GITHUB_OUTPUT"
+          docker load --input "${IMAGE_TAR}" || echo "No prebuilt image found"
 
-      - name: Show exact image reference
-        run: echo "Deploying ${{ steps.image-metadata.outputs.image_reference }}"
+      - name: Set image tag
+        id: image-tag
+        run: |
+          TODAY="$(date -u +%Y-%m-%d)"
+          IMAGE_TAG="${TODAY}-${GITHUB_RUN_ID}"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Print recreated image tag details
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t "${IMAGE_NAME}:${{ steps.image-tag.outputs.image_tag }}" \
+            .
+
+      - name: Print image tag
         run: |
           echo "====================================="
-          echo "Recreated Image Tag: ${{ steps.image-metadata.outputs.image_tag }}"
-          echo "Recreated Image Reference: ${{ steps.image-metadata.outputs.image_reference }}"
+          echo "Deploying image tag: ${{ steps.image-tag.outputs.image_tag }}"
           echo "====================================="
 
       - name: Start container
@@ -63,12 +62,11 @@ jobs:
           docker run -d \
             --name "${CONTAINER_NAME}" \
             -p "${APP_PORT}:8000" \
-            "${{ steps.image-metadata.outputs.image_reference }}"
+            "${IMAGE_NAME}:${{ steps.image-tag.outputs.image_tag }}"
 
-      # ✅ FIXED: proper indentation
-      - name: Wait for container to start
+      - name: Wait for container
         run: |
-          echo "Waiting for container to initialize..."
+          echo "Waiting for container..."
           sleep 5
 
       - name: Show running containers
