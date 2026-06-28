@@ -67,24 +67,36 @@ jobs:
             "${{ steps.image-metadata.outputs.image_reference }}"
 
       # show running containers
+      - name: Wait for container to start
+        run: |
+        echo "Waiting for container to initialize..."
+        sleep 5
+
       - name: Show running containers
         run: docker ps
 
-      # inspect health endpoint response body
+      - name: Debug container logs
+        run: docker logs "${CONTAINER_NAME}" || true
+
       - name: Print /health response body
         run: |
-          for i in 1 2 3 4 5; do
-            RESPONSE=$(curl -s "http://127.0.0.1:${APP_PORT}/health")
-            if [ ! -z "$RESPONSE" ]; then
-              echo "Health response:"
-              echo "$RESPONSE"
-              exit 0
-            fi
-            echo "Waiting for app..."
-            sleep 2
-          done
-          echo "Failed to get /health response"
-          exit 1
+         for i in 1 2 3 4 5 6 7 8 9 10; do
+           echo "Attempt $i..."
+
+           RESPONSE=$(curl -s --max-time 2 "http://127.0.0.1:${APP_PORT}/health" || true)
+
+           if [ ! -z "$RESPONSE" ]; then
+            echo "Health response:"
+            echo "$RESPONSE"
+            exit 0
+           fi
+
+           echo "Not ready yet..."
+           sleep 2
+         done
+
+         echo "Failed to get /health response after retries"
+         exit 1
 
       - name: Stop container
         if: always()
