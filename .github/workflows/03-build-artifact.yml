@@ -11,6 +11,7 @@ env:
   IMAGE_NAME: tiny-health-app
   IMAGE_TAR: tiny-health-app.tar
   IMAGE_METADATA: image-metadata.env
+  TRIVY_REPORT: trivy-image-report.txt
   ARTIFACT_NAME: tiny-health-app-image
 
 jobs:
@@ -44,30 +45,41 @@ jobs:
 
       - name: Build Docker image with docker build
         # Create the packaged application image with one traceable tag.
-        # The deploy workflow will run this exact same tag later.
         run: |
           docker build \
             -t "${IMAGE_NAME}:${{ steps.image-tag.outputs.image_tag }}" \
             .
 
+      - name: Scan Docker image with Trivy
+        # Scan the built image for vulnerabilities.
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.image_tag }}"
+          format: table
+          output: ${{ env.TRIVY_REPORT }}
+          exit-code: "0"
+
       - name: Save Docker image as artifact file
         # Convert that exact tagged image into a file that can be reused later.
-        run: docker save "${IMAGE_NAME}:${{ steps.image-tag.outputs.image_tag }}" -o "${IMAGE_TAR}"
+        run: |
+          docker save \
+            "${IMAGE_NAME}:${{ steps.image-tag.outputs.image_tag }}" \
+            -o "${IMAGE_TAR}"
 
       - name: Save image metadata
         # Keep the exact built image reference alongside the tar file.
-        # The deploy workflow reads this file later instead of recreating the tag.
         run: |
           IMAGE_REFERENCE="${IMAGE_NAME}:${{ steps.image-tag.outputs.image_tag }}"
           printf 'IMAGE_TAG=%s\n' "${{ steps.image-tag.outputs.image_tag }}" > "${IMAGE_METADATA}"
           printf 'IMAGE_REFERENCE=%s\n' "${IMAGE_REFERENCE}" >> "${IMAGE_METADATA}"
 
       - name: Upload build artifact
-        # Store the packaged output so a later workflow can use the exact same package.
+        # Upload the image, metadata, and Trivy scan report.
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: |
             ${{ env.IMAGE_TAR }}
             ${{ env.IMAGE_METADATA }}
+            ${{ env.TRIVY_REPORT }}
           retention-days: 7
